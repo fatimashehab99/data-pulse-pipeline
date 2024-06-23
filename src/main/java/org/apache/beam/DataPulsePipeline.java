@@ -17,24 +17,18 @@
  */
 package org.apache.beam;
 
+import DataTransformation.PageViewsTransformation;
+import Models.Option;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.TextIO;
+import org.apache.beam.sdk.io.FileIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.transforms.*;
-import org.apache.beam.sdk.transforms.join.CoGbkResult;
-import org.apache.beam.sdk.transforms.join.CoGroupByKey;
-import org.apache.beam.sdk.transforms.join.KeyedPCollectionTuple;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.beam.sdk.values.TupleTag;
-import org.apache.beam.sdk.values.TypeDescriptors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.beam.sdk.values.KV;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.security.Key;
+import java.io.File;
 
 /**
  * A starter example for writing Beam programs.
@@ -52,15 +46,29 @@ import java.security.Key;
  * --stagingLocation=<STAGING_LOCATION_IN_CLOUD_STORAGE>
  * --runner=DataflowRunner
  */
-public class StarterPipeline {
+public class DataPulsePipeline {
 
-    private static final Logger LOG = LoggerFactory.getLogger(StarterPipeline.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DataPulsePipeline.class);
 
     public static void main(String[] args) {
-        // Create a Pipeline with options
-        Pipeline p = Pipeline.create(
-                PipelineOptionsFactory.fromArgs(args).withValidation().create());
-        p.run().waitUntilFinish();
+        // pipeline options
+        Option options = PipelineOptionsFactory.fromArgs(args).withValidation()
+                .as(Option.class);
+        //creating pipeline
+        Pipeline p = Pipeline.create(options);
+
+        //reading data from json
+        PCollection<FileIO.ReadableFile> jsonLines = p.apply("ReadJSONFile", FileIO.match().filepattern(options.getInputFile()))
+                .apply("ParseJSON", FileIO.readMatches());
+        //transforming json data to page view objects
+        PCollection<String> pageViews = jsonLines.apply("TransformData", ParDo.of(new PageViewsTransformation()));
+        pageViews.apply("logResults", ParDo.of(new DoFn<String, Void>() {
+            @ProcessElement
+            public void processElement(ProcessContext c) {
+                LOG.info("Result" + c.element());
+            }
+        }));
+        p.run();
     }
 
 }
