@@ -17,18 +17,17 @@
  */
 package org.apache.beam;
 
-import DataTransformation.PageViewsTransformation;
+import DataTransformation.EnrichingWithCountryInfo;
+import DataTransformation.ParsingJSON;
 import Models.Option;
+import Models.PageView;
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.io.FileIO;
+import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.PCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
 
 /**
  * A starter example for writing Beam programs.
@@ -56,19 +55,18 @@ public class DataPulsePipeline {
                 .as(Option.class);
         //creating pipeline
         Pipeline p = Pipeline.create(options);
-
-        //reading data from json
-        PCollection<FileIO.ReadableFile> jsonLines = p.apply("ReadJSONFile", FileIO.match().filepattern(options.getInputFile()))
-                .apply("ParseJSON", FileIO.readMatches());
-        //transforming json data to page view objects
-        PCollection<String> pageViews = jsonLines.apply("TransformData", ParDo.of(new PageViewsTransformation()));
-        pageViews.apply("logResults", ParDo.of(new DoFn<String, Void>() {
+        PCollection<String> json = p.apply("ReadJSONLines", TextIO.read().from(options.getInputFile())); ///reading JSON lines
+        PCollection<PageView> pageViews = json.apply("ParseJson", ParDo.of(new ParsingJSON()))////Parsing JSON to page view schema
+                .apply("FilterData", Filter.by((PageView pageview) -> "product".equals((pageview.getPost_type()))))///post type must be a product
+                .apply("EnrichWithCountryInfo", ParDo.of(new EnrichingWithCountryInfo()));
+        pageViews.apply("log", ParDo.of(new DoFn<PageView, Void>() {
             @ProcessElement
             public void processElement(ProcessContext c) {
-                LOG.info("Result" + c.element());
+                PageView element = c.element();
+                LOG.info("Post Title: {}", element.toString());
             }
         }));
+
         p.run();
     }
-
 }
