@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.text.SimpleDateFormat;
 
-import static helpers.Constants.*;
+import static helpers.Config.*;
 
 public class PageViewBQSchema {
     public static class PageViewsSchema extends DoFn<PageView, TableRow> {
@@ -43,10 +43,9 @@ public class PageViewBQSchema {
                         .set(IP, pageview.getIp())
                         .set(USER_ID, pageview.getUser_id())
                         .set(DEVICE, pageview.getDevice())
-                        .set(COUNTRY_NAME, "India")
-                        .set(COUNTRY_CODE,"IN");
-//                        .set(COUNTRY_NAME, pageview.getCountry_name())
-//                        .set(COUNTRY_CODE, pageview.getCountry_code());
+
+                        .set(COUNTRY_NAME, pageview.getCountry_name())
+                        .set(COUNTRY_CODE, pageview.getCountry_code());
 
                 c.output(row);
             } catch (Exception e) {

@@ -17,12 +17,10 @@
  */
 package org.apache.beam;
 
-import DataTransformation.EnrichingWithCountryInfo;
 import DataTransformation.ParsingJSON;
 import Models.Option;
 import Models.PageView;
 import Models.PageViewBQSchema;
-import jdk.internal.org.jline.utils.Log;
 import org.apache.beam.runners.dataflow.DataflowRunner;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
@@ -35,7 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static Models.PageViewBQSchema.PageViewsSchema.getPageViewSchema;
-import static helpers.Constants.*;
+import static helpers.Config.*;
 
 /**
  * A starter example for writing Beam programs.
@@ -65,23 +63,22 @@ public class DataPulsePipeline {
         //creating pipeline
         Pipeline p = Pipeline.create(options);
 
-        //dataflow runner
         // Set Dataflow specific options
-//        options.setJobName("data-insight-engine-job"); //job name
-//        options.setTempLocation(PATH + "/tmp");//cloud storage temp file location
-//        options.setProject(PROJECT_ID);// GCP project id
-//        options.setRegion("us-central1");//set region
-//        options.setStagingLocation(PATH + "/staging");
+        options.setJobName("data-pulse-job"); //job name
+        options.setTempLocation(PATH + "/tmp");//cloud storage temp file location
+        options.setProject(PROJECT_ID);// GCP project id
+        options.setRegion("us-central1");//set region
+        options.setStagingLocation(PATH + "/staging");
 //        options.setTemplateLocation(PATH + "/template");
-//        options.setMaxNumWorkers(10);//max workers
-//        options.setRunner(DataflowRunner.class);//set data flow as runner
+        options.setMaxNumWorkers(10);//max workers
+        options.setRunner(DataflowRunner.class);//set data flow as runner
 
-        Log.info("Reading JSON lines");
+        LOG.info("Reading JSON lines");
         PCollection<String> json = p.apply("ReadJSONLines", TextIO.read().from(options.getInputFile())); ///reading JSON lines
 
         PCollection<PageView> pageViews = json.apply("ParseJson", ParDo.of(new ParsingJSON()))////Parsing JSON to page view schema
-                .apply("FilterData", Filter.by((PageView pageview) -> "product".equals((pageview.getPost_type()))))///post type must be a product
-                .apply("EnrichWithCountryInfo", ParDo.of(new EnrichingWithCountryInfo())); //adding country name and code
+                .apply("FilterData", Filter.by((PageView pageview) -> "product".equals((pageview.getPost_type()))));///post type must be a product
+//                .apply("EnrichWithCountryInfo", ParDo.of(new EnrichingWithCountryInfo())); //adding country name and code
 
         //adding page views to bigQuery
         pageViews.apply("ConvertToPageViewsBQ", ParDo.of(new PageViewBQSchema.PageViewsSchema()))
