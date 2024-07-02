@@ -4,6 +4,7 @@ import com.google.api.services.bigquery.model.TableFieldSchema;
 import com.google.api.services.bigquery.model.TableRow;
 import com.google.api.services.bigquery.model.TableSchema;
 import helpers.Constants;
+import jdk.jpackage.internal.Log;
 import org.apache.beam.sdk.transforms.DoFn;
 
 import java.text.ParseException;
@@ -21,33 +22,38 @@ public class PageViewBQSchema {
         @ProcessElement
         public void processElement(ProcessContext c) throws ParseException {
             PageView pageview = c.element();
-
             assert pageview != null;
-            TableRow row = new TableRow()
-                    .set(POST_TITLE, pageview.getPost_title())
-                    .set(POST_TAGS, pageview.getPost_tags())
-                    .set(POST_URL, pageview.getPost_url())
-                    .set(POST_TYPE, pageview.getPost_type())
-                    .set(DOMAIN, pageview.getDomain())
-                    .set(POST_DESCRIPTION, pageview.getDescription())
-                    .set(POST_IMAGE, pageview.getPost_image())
-                    .set(POST_CURRENCY, pageview.getPost_currency())
-                    .set(POST_DISCOUNT_PRICE, parseStringToDouble(pageview.getPost_discount_price()))
-                    .set(POST_BASE_PRICE, parseStringToDouble(pageview.getPost_base_price()))
-                    .set(POST_VENDOR, pageview.getPost_vendor())
-                    .set(POST_DATE, dateFormat.parse(pageview.getPost_date()))
-                    .set(POST_ID, pageview.getPost_id())
-                    .set(POST_ITEMS, pageview.getPost_items())
-                    .set(IP, pageview.getIp())
-                    .set(USER_ID, pageview.getUser_id())
-                    .set(DEVICE, pageview.getDevice())
-                    .set(COUNTRY_NAME, pageview.getCountry_name())
-                    .set(COUNTRY_CODE, pageview.getCountry_code());
+            try {
+                Log.info("Adding pageViews to bigQuery");
+                TableRow row = new TableRow()
+                        .set(POST_TITLE, pageview.getPost_title())
+                        .set(POST_TAGS, pageview.getPost_tags())
+                        .set(POST_URL, pageview.getPost_url())
+                        .set(POST_TYPE, pageview.getPost_type())
+                        .set(DOMAIN, pageview.getDomain())
+                        .set(POST_DESCRIPTION, pageview.getDescription())
+                        .set(POST_IMAGE, pageview.getPost_image())
+                        .set(POST_CURRENCY, pageview.getPost_currency())
+                        .set(POST_DISCOUNT_PRICE, parseStringToDouble(pageview.getPost_discount_price()))
+                        .set(POST_BASE_PRICE, parseStringToDouble(pageview.getPost_base_price()))
+                        .set(POST_VENDOR, pageview.getPost_vendor())
+                        .set(POST_DATE, dateFormat.parse(pageview.getPost_date()))
+                        .set(POST_ID, pageview.getPost_id())
+                        .set(POST_ITEMS, pageview.getPost_items())
+                        .set(IP, pageview.getIp())
+                        .set(USER_ID, pageview.getUser_id())
+                        .set(DEVICE, pageview.getDevice())
+                        .set(COUNTRY_NAME, pageview.getCountry_name())
+                        .set(COUNTRY_CODE, pageview.getCountry_code());
 
-            c.output(row);
+                c.output(row);
+            } catch (Exception e) {
+                Log.error(String.valueOf(e));
+            }
+
         }
 
-        ///to get page view fields name
+        ///pageView bigQuery Schema
         public static TableSchema getPageViewSchema() {
             List<TableFieldSchema> fields = new ArrayList<>();
             // Define each field with its name and type
@@ -59,10 +65,10 @@ public class PageViewBQSchema {
             fields.add(new TableFieldSchema().setName(POST_DESCRIPTION).setType("STRING"));
             fields.add(new TableFieldSchema().setName(POST_IMAGE).setType("STRING"));
             fields.add(new TableFieldSchema().setName(POST_CURRENCY).setType("STRING"));
-            fields.add(new TableFieldSchema().setName(POST_DISCOUNT_PRICE).setType("FLOAT")); // Assuming post_discount_price is parsed as float/double
-            fields.add(new TableFieldSchema().setName(POST_BASE_PRICE).setType("FLOAT")); // Assuming post_base_price is parsed as float/double
+            fields.add(new TableFieldSchema().setName(POST_DISCOUNT_PRICE).setType("FLOAT"));
+            fields.add(new TableFieldSchema().setName(POST_BASE_PRICE).setType("FLOAT"));
             fields.add(new TableFieldSchema().setName(POST_VENDOR).setType("STRING"));
-            fields.add(new TableFieldSchema().setName(POST_DATE).setType("TIMESTAMP")); // Assuming post_date is parsed as DATE type
+            fields.add(new TableFieldSchema().setName(POST_DATE).setType("TIMESTAMP"));
             fields.add(new TableFieldSchema().setName(POST_ID).setType("STRING"));
             fields.add(new TableFieldSchema().setName(POST_ITEMS).setType("STRING").setMode("REPEATED")); // Assuming post_items is an array of strings
             fields.add(new TableFieldSchema().setName(IP).setType("STRING"));
@@ -78,8 +84,7 @@ public class PageViewBQSchema {
                 try {
                     return Double.parseDouble(numericString.trim());
                 } catch (NumberFormatException e) {
-                    // Handle appropriately if parsing fails
-                    return null; // or throw an exception, log an error, etc.
+                    return null;
                 }
             }
             return null; // Handle null case if needed
