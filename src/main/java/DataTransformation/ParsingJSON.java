@@ -2,8 +2,10 @@ package DataTransformation;
 
 import Models.PageView;
 import com.google.gson.*;
-import jdk.jpackage.internal.Log;
+import org.apache.beam.DataPulsePipeline;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -11,10 +13,11 @@ import java.util.regex.Pattern;
 public class ParsingJSON extends DoFn<String, PageView> {
     private static final Gson gson = new Gson();
     private static final Pattern pricePattern = Pattern.compile("\\$(\\d+(\\.\\d{1,2})?)\\sUSD");
+    private static final Logger LOG = LoggerFactory.getLogger(ParsingJSON.class);
 
     @ProcessElement
     public void processElement(@Element String json, OutputReceiver<PageView> r) throws Exception {
-        Log.info("Parsing JSON to pageViews");
+        LOG.info("Parsing JSON to pageViews");
         try {
             ///mapping the JSON fields to pageView
             PageView pageview = gson.fromJson(json, PageView.class);
@@ -25,7 +28,7 @@ public class ParsingJSON extends DoFn<String, PageView> {
             r.output(pageview);
 
         } catch (Exception e) {
-            Log.error(String.valueOf(e));
+            LOG.error(String.valueOf(e));
         }
     }
 

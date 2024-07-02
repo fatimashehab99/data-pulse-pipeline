@@ -3,28 +3,28 @@ package Models;
 import com.google.api.services.bigquery.model.TableFieldSchema;
 import com.google.api.services.bigquery.model.TableRow;
 import com.google.api.services.bigquery.model.TableSchema;
-import helpers.Constants;
-import jdk.jpackage.internal.Log;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 
 import static helpers.Constants.*;
 
 public class PageViewBQSchema {
     public static class PageViewsSchema extends DoFn<PageView, TableRow> {
         private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        private static final Logger LOG = LoggerFactory.getLogger(PageViewsSchema.class);
 
         @ProcessElement
         public void processElement(ProcessContext c) throws ParseException {
             PageView pageview = c.element();
             assert pageview != null;
             try {
-                Log.info("Adding pageViews to bigQuery");
+                LOG.info("Adding pageViews to bigQuery");
                 TableRow row = new TableRow()
                         .set(POST_TITLE, pageview.getPost_title())
                         .set(POST_TAGS, pageview.getPost_tags())
@@ -43,12 +43,14 @@ public class PageViewBQSchema {
                         .set(IP, pageview.getIp())
                         .set(USER_ID, pageview.getUser_id())
                         .set(DEVICE, pageview.getDevice())
-                        .set(COUNTRY_NAME, pageview.getCountry_name())
-                        .set(COUNTRY_CODE, pageview.getCountry_code());
+                        .set(COUNTRY_NAME, "India")
+                        .set(COUNTRY_CODE,"IN");
+//                        .set(COUNTRY_NAME, pageview.getCountry_name())
+//                        .set(COUNTRY_CODE, pageview.getCountry_code());
 
                 c.output(row);
             } catch (Exception e) {
-                Log.error(String.valueOf(e));
+                LOG.error(String.valueOf(e));
             }
 
         }
