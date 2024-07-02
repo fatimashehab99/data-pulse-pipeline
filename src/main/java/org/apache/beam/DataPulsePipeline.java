@@ -21,13 +21,19 @@ import DataTransformation.EnrichingWithCountryInfo;
 import DataTransformation.ParsingJSON;
 import Models.Option;
 import Models.PageView;
+import Models.PageViewBQSchema;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.PCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static Models.PageViewBQSchema.PageViewsSchema.getPageViewSchema;
+import static helpers.Constants.*;
 
 /**
  * A starter example for writing Beam programs.
@@ -53,6 +59,7 @@ public class DataPulsePipeline {
         // pipeline options
         Option options = PipelineOptionsFactory.fromArgs(args).withValidation()
                 .as(Option.class);
+        
         //creating pipeline
         Pipeline p = Pipeline.create(options);
         PCollection<String> json = p.apply("ReadJSONLines", TextIO.read().from(options.getInputFile())); ///reading JSON lines
@@ -66,6 +73,16 @@ public class DataPulsePipeline {
                 LOG.info("Post Title: {}", element.toString());
             }
         }));
+
+        //Writing to Page Views Big query table
+        pageViews.apply("ConvertToPageViewsBQ", ParDo.of(new PageViewBQSchema.PageViewsSchema()))
+                .apply("WriteToPageViewsBQ", BigQueryIO.writeTableRows()
+                        .to(String.format("%s:%s.%s", PROJECT_ID, DATASET_ID, PAGEVIEWS))
+                        .withSchema(getPageViewSchema())
+                        .withCustomGcsTempLocation(ValueProvider.StaticValueProvider.of("gs://data_storage_2024/data-pulse/tmpBQ/"))
+                        .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
+                        .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND));
+
 
         p.run();
     }
